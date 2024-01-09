@@ -1,0 +1,148 @@
+#!/bin/bash
+
+# 获取当前目录并存储在变量中
+current_directory=$(cd "$(dirname "$0")" && pwd)
+
+main_img_size=220
+cover_img_size=160
+
+# 清除终端显示
+clear
+
+# 欢迎使用
+echo "欢迎使用图片压缩工具, 免费压缩次数为500次/月。"
+echo "待压缩的图片请放入 img"
+
+# 列出当前目录下的img文件夹中的所有图片文件并设置为变量，不包含子文件夹
+img_files=$(ls "$current_directory/img")
+# 统计当前目录下的img文件夹中的所有图片文件的数量，不包含子文件夹
+img_count=$(find "$current_directory/img" -maxdepth 1 -type f \( -iname \*.jpg -o -iname \*.jpeg -o -iname \*.png -o -iname \*.gif -o -iname \*.webp \) | wc -l)
+
+# 输出当前目录下的img文件夹中不同格式的图片文件的数量
+echo "待压缩图片文件数量：$img_count"
+echo "------------------------"
+echo "jpg:   $(find "$current_directory/img" -maxdepth 1 -type f -iname \*.jpg | wc -l) 张"
+echo "jpeg:  $(find "$current_directory/img" -maxdepth 1 -type f -iname \*.jpeg | wc -l) 张"
+echo "png:   $(find "$current_directory/img" -maxdepth 1 -type f -iname \*.png | wc -l) 张"
+echo "gif:   $(find "$current_directory/img" -maxdepth 1 -type f -iname \*.gif | wc -l) 张"
+
+# 提示启动压缩
+echo "------------------------"
+
+# 询问处理的图片类型
+echo "请选择压缩类型："
+echo "1.内容图"
+echo "2.封面图"
+read -n1 -p "请输入您的选择 (1-2): " compress_type
+
+case $compress_type in
+  1)  
+    echo "开始压缩内容图"
+    "$current_directory/contents/tinypng" "$current_directory/img" --width 750 --height 1000
+    type=1
+    ;;
+  2)
+    echo "开始压缩封面图"
+    "$current_directory/contents/tinypng" "$current_directory/img" --width 690 --height 518
+    type=2
+    ;;
+  *)
+    echo "无效输入，请输入 1-2 之间的数字。"
+    ;;
+esac
+
+# 创建webp文件夹
+if [ ! -d "$current_directory/img/webp" ]; then
+  mkdir "$current_directory/img/webp"
+fi
+echo "------------------------"
+
+# 根据压缩的类型做不同的判断
+if [ "$type" -eq 1 ]; then
+    find "$current_directory/img" -type f \( -name "裁剪-*.jpg" -o -name "裁剪-*.png" \) | while read file; do
+        # 获取文件大小（单位：KB）
+        file_size=$(du -k "$file" | cut -f1)
+        # 比较文件大小
+        if [ "$file_size" -gt "$main_img_size" ]; then
+            echo "$file 超出限制，可以尝试转换成webp。"
+            # 提示开始转换webp格式
+read -n1 -p "是否继续转换为webp (Y/N): " webpyes
+case $webpyes in
+  Y)  
+    echo "开始转换"
+    # 遍历当前目录下img文件夹中的所有图片文件，使用$current_directory/contents/cwebp命令将图片转换为webp格式并存储在当前目录
+export DYLD_FALLBACK_LIBRARY_PATH="$current_directory/Contents/libs"
+# 使用 find 命令获取所有图片文件
+find "$current_directory/img" -type f \( -iname \裁剪-*.jpg -o -iname \裁剪-*.jpeg -o -iname \裁剪-*.png -o -iname \裁剪-*.gif \) | while read -r file; do
+    # 转换webp格式并存入webp文件夹
+    "$current_directory/contents/cwebp" -lossless -m 6 "$file" -o "$current_directory/img/webp/$(basename "$file" .jpg).webp"
+done
+
+# 提示压缩完成
+echo "压缩完成"
+echo "------------------------"
+echo "按任意键打开压缩后的图片文件夹"
+read -r
+
+# 打开压缩后的图片文件夹
+open "$current_directory/img"
+    ;;
+  N)
+    echo "感谢使用"
+    exit 0
+    ;;
+  *)
+    ;;
+esac
+        else
+            echo "$file 合格"
+            echo "没有需要转换的图片"
+            exit 0
+        fi
+    done
+elif [ "$type" -eq 2 ]; then
+    find "$current_directory/img" -type f \( -name "裁剪-*.jpg" -o -name "裁剪-*.png" \) | while read file; do
+        # 获取文件大小（单位：KB）
+        file_size=$(du -k "$file" | cut -f1)
+        # 比较文件大小
+        if [ "$file_size" -gt "$cover_img_size" ]; then
+            echo "$file 超出限制，可以尝试转换成webp。"
+            # 提示开始转换webp格式
+read -n1 -p "是否继续转换为webp (Y/N): " webpyes
+case $webpyes in
+  Y)  
+    echo "开始转换"
+    # 遍历当前目录下img文件夹中的所有图片文件，使用$current_directory/contents/cwebp命令将图片转换为webp格式并存储在当前目录
+export DYLD_FALLBACK_LIBRARY_PATH="$current_directory/Contents/libs"
+# 使用 find 命令获取所有图片文件
+find "$current_directory/img" -type f \( -iname \裁剪-*.jpg -o -iname \裁剪-*.jpeg -o -iname \裁剪-*.png -o -iname \裁剪-*.gif \) | while read -r file; do
+    # 转换webp格式并存入webp文件夹
+    "$current_directory/contents/cwebp" -lossless -m 6 "$file" -o "$current_directory/img/webp/$(basename "$file" .jpg).webp"
+done
+
+# 提示压缩完成
+echo "压缩完成"
+echo "------------------------"
+echo "按任意键打开压缩后的图片文件夹"
+read -r
+
+# 打开压缩后的图片文件夹
+open "$current_directory/img"
+    ;;
+  N)
+    echo "感谢使用"
+    exit 0
+    ;;
+  *)
+    ;;
+esac
+        else
+            echo "$file 合格"
+            echo "没有需要转换的图片"
+            exit 0
+        fi
+    done
+else
+    echo "没有需要转换的图片"
+    exit 0
+fi
