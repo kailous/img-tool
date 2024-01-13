@@ -17,6 +17,8 @@ jobs:
     
     - name: Checkout repository
       uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Convert README.md to HTML
       run: |
@@ -24,8 +26,8 @@ jobs:
 
     - name: Push HTML to GitHub Pages
       run: |
-        git config user.name "kailous"
-        git config user.email "kailous@users.noreply.github.com"
+        git config user.name "github-actions[bot]"
+        git config user.email "<email-address>"
         git add index.html
         git commit -m "Update GitHub Pages"
         git push
