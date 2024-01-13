@@ -3,4 +3,4 @@
 
 新建文本文档，`顶部栏 > 格式 > 制作纯文本`，或者按快捷键 `⇧⌘T( shift + command + T )` 进入`纯文本编辑模式`。
 输入上一步获取到的 `API key`，保存的时候,命名为 `tinify.key` ,将文件保存到当前文件夹中。
-![保存tinify.key文件到 key文件夹](../../../README/保存key文件.png)
+![保存tinify.key文件到 key文件夹](../../../.README/保存key文件.png)
