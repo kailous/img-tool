@@ -7,12 +7,16 @@ var glob = require('glob');
 var uniq = require('array-uniq');
 var chalk = require('chalk');
 var argv = require('minimist')(process.argv.slice(2));
-var home = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
 
-// 设置TinyPNG API密钥，从根目录下的tinify.key文件中读取
-var key = argv.k || argv.key || (fs.existsSync(home + '/tinify.key') ? fs.readFileSync(home + '/tinify.key', 'utf8') : '');
+// 设置TinyPNG API密钥，从项目根目录下的tinify.key文件中读取
+var key = argv.k || argv.key || (fs.existsSync('res/key/tinify.key') ? fs.readFileSync('res/key/tinify.key', 'utf8') : '');
 tinify.key = key;
-
+// 如果没有设置API密钥,提示用户设置
+if (!key) {
+    console.log(chalk.red('请先设置TinyPNG API密钥，前往 https://tinify.com/dashboard/api 获取。'));
+    console.log(chalk.blue('将API密钥写入key文件夹下的tinify.key文件中。'));
+    process.exit();
+}
 var version = require('./package.json').version;
 var resizeOptions = {};
 
