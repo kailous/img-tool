@@ -9,8 +9,8 @@ var chalk = require('chalk');
 var argv = require('minimist')(process.argv.slice(2));
 var home = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
 
-// 设置TinyPNG API密钥
-var key = argv.k || argv.key || fs.existsSync(home + '/.tinypng') ? fs.readFileSync(home + '/.tinypng', 'utf8').trim() : '';
+// 设置TinyPNG API密钥，从根目录下的tinify.key文件中读取
+var key = argv.k || argv.key || (fs.existsSync(home + '/tinify.key') ? fs.readFileSync(home + '/tinify.key', 'utf8') : '');
 tinify.key = key;
 
 var version = require('./package.json').version;

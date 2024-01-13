@@ -27,7 +27,8 @@
     "minimatch": "^3.0.0",
     "minimist": "^1.2.0",
     "prettysize": "0.0.3",
-    "request": "^2.70.0"
+    "request": "^2.70.0",
+    "tinify": "^1.7.1"
   },
   "preferGlobal": "true",
   "bin": {
