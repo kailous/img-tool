@@ -24,7 +24,6 @@ clear
 echo "欢迎使用图片压缩工具, 免费压缩次数为500次/月。"
 echo "待压缩的图片请放入 img 文件夹"
 
-
 # 创建输出和webp文件夹
 mkdir -p "$output_files" "$webp"
 
@@ -32,8 +31,8 @@ mkdir -p "$output_files" "$webp"
 echo "待压缩图片文件数量："
 echo "------------------------"
 for ext in jpg jpeg png gif; do
-  count=$(find "$img_files" -maxdepth 1 -type f -iname "*.$ext" | wc -l)
-  echo "$ext:   $count 张"
+    count=$(find "$img_files" -maxdepth 1 -type f -iname "*.$ext" | wc -l)
+    echo "$ext:   $count 张"
 done
 echo "------------------------"
 
@@ -53,7 +52,7 @@ read_ini() {
             value=$conf_value
             break
         fi
-    done < "$config_file"
+    done <"$config_file"
 
     echo "$value"
 }
@@ -81,74 +80,84 @@ compress_image() {
     local label=$1
     local width=$2
     local height=$3
+    # 添加调试信息
+    echo "输出文件夹路径: $output_files"
+    echo "标签: $label"
     if [ -z "$width" ] || [ -z "$height" ]; then
         echo "错误：缺少必要的宽度或高度参数。"
         return 1
     fi
     "$tinypng" "$img_files" --width "$width" --height "$height"
-    find "$img_files" -type f \( -name "裁剪-*.jpg" -o -name "裁剪-*.png" \) -exec sh -c 'file={}; mv "$file" "$2/'"$label"'$(basename "$file")"' _ {} "$output_files" \;
+    find "$img_files" -type f \( -name "裁剪-*.jpg" -o -name "裁剪-*.png" \) -exec sh -c 'file="$1"; output_files="$2"; type_selected="$3"; mv "$file" "$output_files/$type_selected-$(basename "$file")"' _ {} "$output_files" "$type_selected" \;
 }
 
 # 根据选择读取配置并压缩图片
 echo "选中的类型: $type_selected"
 width=$(read_ini "$type_selected" "width")
 height=$(read_ini "$type_selected" "height")
-
-compress_image "$type_selected" "$width" "$height"
+label=$(read_ini "$type_selected" "label")
 img_size=$(read_ini "$type_selected" "size")
-# 提示开始转换webp格式
+compress_image "$type_selected" "$width" "$height"
+
+# 转换webp格式
 convert_to_webp() {
-  echo "是否继续转换为webp (Y/N): "
-  read -n1 webpyes
-  echo
-  case $webpyes in
-    Y|y)  
-      echo "开始转换"
-      export DYLD_FALLBACK_LIBRARY_PATH="$app_files/libs"
-      find "$output_files" -type f \( -iname "*裁剪-*.jpg" -o -iname "*裁剪-*.jpeg" -o -iname "*裁剪-*.png" -o -iname "*裁剪-*.gif" \) | while read -r file; do
-          "$cwebp" -lossless -m 6 "$file" -o "$webp/$(basename "$file" .jpg).webp"
-      done
-      echo "压缩完成"
-      echo "------------------------"
-      echo "按任意键打开压缩后的图片文件夹"
-      read -r
-      open "$output_files"
-      ;;
-    N|n)
-      echo "感谢使用"
-      exit 0
-      ;;
-    *)
-      ;;
-  esac
+    echo "开始转换"
+    export DYLD_FALLBACK_LIBRARY_PATH="$app_files/libs"
+    find "$output_files" -type f \( -iname "*裁剪-*.jpg" -o -iname "*裁剪-*.jpeg" -o -iname "*裁剪-*.png" -o -iname "*裁剪-*.gif" \) | while read -r file; do
+        "$cwebp" -lossless -m 6 "$file" -o "$webp/$(basename "$file" .jpg).webp"
+    done
+    echo "转换成功"
+    open "$webp"
 }
+
 
 # 处理图片大小超标的情况
 process_images() {
     local img_size=$1
-    find "$output_files" -type f \( -name "*裁剪-*.jpg" -o -name "*裁剪-*.png" \) | while read file; do
-        file_size=$(du -k "$file" | cut -f1)
-        if [ "$file_size" -gt "$img_size" ]; then
-            echo "$file 超出限制，可以尝试转换成webp。"
-            convert_to_webp
+    local output_files=$2
+    local file_processed=false
+    local reply
+
+    echo "正在检查图片大小，限制为 $img_size KB..."
+
+    # 使用数组存储找到的文件
+    IFS=$'\n' read -d '' -r -a files < <(find "$output_files" -type f \( -iname "*裁剪-*.jpg" -o -iname "*裁剪-*.jpeg" -o -iname "*裁剪-*.png" -o -iname "*裁剪-*.gif" \) -print0)
+    for file in "${files[@]}"; do
+        size=$(stat -f "%z" "$file")
+        echo "检查文件 $file，大小为 $(($size / 1000)) KB。"
+        if [ "$size" -gt "$img_size" ]; then
+            echo "文件 $file 超过限制，大小为 $(($size / 1000)) KB。"
+            # 询问是否转换webp格式
+            prompt_webp_run "$file" # 确保这个函数可以处理文件名
+            file_processed=true
+            break
         else
-            echo "$file 合格"
-            echo "没有需要转换的图片"
-            exit 0
+            echo "文件 $file 未超过限制。"
         fi
     done
 }
 
-# 根据压缩的类型做不同的判断
-if [ "$label" -eq 1 ]; then
-    process_images "$main_img_size"
-elif [ "$label" -eq 2 ]; then
-    process_images "$cover_img_size"
-else
-    echo "没有需要转换的图片"
-    exit 0
-fi
+# 询问是否转换webp格式
+prompt_webp_run() {
+    local reply
+    read -n1 -p "是否转换为webp格式？(y/n): " reply
+    echo -n "$reply"
+            case $reply in
+                y | Y)
+                    convert_to_webp "$file"  # 确保这个函数可以处理文件名
+                    ;;
+                n | N)
+                    echo "感谢使用"
+                    exit 0
+                    ;;
+                *)
+                    echo
+                    echo "输入错误 请重新输入y 或 n"
+                    # 重新调用 process_images 函数
+                    prompt_webp_run "$file"
+                    ;;
+            esac
+}
 
-# 脚本结束
-echo "处理完成。"
-
+# 调用 process_images 函数
+    process_images "$img_size" "$output_files"
