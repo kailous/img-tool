@@ -2,6 +2,8 @@
 
 # 获取当前目录并存储在变量中
 current_directory=$(cd "$(dirname "$0")" && pwd)
+# 配置文件路径
+config_file="$current_directory/config.ini"
 # 程序依赖文件夹
 app_files="$current_directory/Contents"
 # 图片压缩器
@@ -15,15 +17,13 @@ output_files="$current_directory/output"
 # webp 文件夹
 webp="$output_files/webp"
 
-main_img_size=220
-cover_img_size=160
-
 # 清除终端显示
 clear
 
 # 欢迎使用
 echo "欢迎使用图片压缩工具, 免费压缩次数为500次/月。"
-echo "待压缩的图片请放入 img"
+echo "待压缩的图片请放入 img 文件夹"
+
 
 # 创建输出和webp文件夹
 mkdir -p "$output_files" "$webp"
@@ -35,41 +35,67 @@ for ext in jpg jpeg png gif; do
   count=$(find "$img_files" -maxdepth 1 -type f -iname "*.$ext" | wc -l)
   echo "$ext:   $count 张"
 done
-
 echo "------------------------"
 
-# 询问处理的图片类型
-echo "请选择压缩类型："
-echo "1.内容图"
-echo "2.封面图"
-read -n1 -p "请输入您的选择 (1-2): " compress_type
-echo
+# 读取INI配置文件
+read_ini() {
+    section=$1
+    key=$2
+    pattern="^\\[$section\\]$"
+    value=""
 
+    while IFS='=' read -r conf_key conf_value; do
+        if [[ $conf_key =~ $pattern ]]; then
+            reading_section=true
+        elif [[ $conf_key =~ ^\[.*\]$ ]]; then
+            reading_section=false
+        elif [ "$reading_section" = true ] && [ "$conf_key" = "$key" ]; then
+            value=$conf_value
+            break
+        fi
+    done < "$config_file"
+
+    echo "$value"
+}
+
+# 读取所有图片类型
+read_types() {
+    awk -F'[][]' '/^\[.*\]$/ {print $2}' "$config_file"
+}
+
+# 显示所有图片类型供用户选择
+echo "请选择压缩类型："
+types=$(read_types)
+select_option=1
+for type in $types; do
+    echo "$select_option. $type"
+    select_option=$((select_option + 1))
+done
+
+read -n1 -p "请输入您的选择: " compress_type
+echo
+type_selected=$(echo $types | cut -d ' ' -f$compress_type)
+
+# 压缩图片函数
 compress_image() {
     local label=$1
     local width=$2
     local height=$3
-    echo "开始压缩 $label 图"
+    if [ -z "$width" ] || [ -z "$height" ]; then
+        echo "错误：缺少必要的宽度或高度参数。"
+        return 1
+    fi
     "$tinypng" "$img_files" --width "$width" --height "$height"
-    find "$img_files" -type f \( -name "裁剪-*.jpg" -o -name "裁剑-*.png" \) -exec sh -c 'file={}; mv "$file" "$2/'"$label"'$(basename "$file")"' _ {} "$output_files" \;
+    find "$img_files" -type f \( -name "裁剪-*.jpg" -o -name "裁剪-*.png" \) -exec sh -c 'file={}; mv "$file" "$2/'"$label"'$(basename "$file")"' _ {} "$output_files" \;
 }
 
-case $compress_type in
-  1)  
-    compress_image "内容" 750 1000
-    type=1
-    ;;
-  2)
-    compress_image "封面" 690 518
-    type=2
-    ;;
-  *)
-    echo "无效输入，请输入 1-2 之间的数字。"
-    exit 1
-    ;;
-esac
+# 根据选择读取配置并压缩图片
+echo "选中的类型: $type_selected"
+width=$(read_ini "$type_selected" "width")
+height=$(read_ini "$type_selected" "height")
 
-
+compress_image "$type_selected" "$width" "$height"
+img_size=$(read_ini "$type_selected" "size")
 # 提示开始转换webp格式
 convert_to_webp() {
   echo "是否继续转换为webp (Y/N): "
@@ -86,7 +112,7 @@ convert_to_webp() {
       echo "------------------------"
       echo "按任意键打开压缩后的图片文件夹"
       read -r
-      open "$img_files"
+      open "$output_files"
       ;;
     N|n)
       echo "感谢使用"
@@ -97,6 +123,7 @@ convert_to_webp() {
   esac
 }
 
+# 处理图片大小超标的情况
 process_images() {
     local img_size=$1
     find "$output_files" -type f \( -name "*裁剪-*.jpg" -o -name "*裁剪-*.png" \) | while read file; do
@@ -121,3 +148,7 @@ else
     echo "没有需要转换的图片"
     exit 0
 fi
+
+# 脚本结束
+echo "处理完成。"
+
