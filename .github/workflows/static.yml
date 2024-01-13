@@ -1,0 +1,33 @@
+name: Generate GitHub Page
+
+on:
+  push:
+    branches:
+      - main  # 或者您使用的默认分支
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+        
+    - name: Install Pandoc
+      run: |
+        sudo apt-get install -y pandoc
+    
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.GH_TOKEN }}
+
+    - name: Convert README.md to HTML
+      run: |
+        pandoc README.md -o index.html
+
+    - name: Push HTML to GitHub Pages
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "<email-address>"
+        git add index.html
+        git commit -m "Update GitHub Pages"
+        git push
