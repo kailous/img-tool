@@ -24,8 +24,8 @@ jobs:
 
     - name: Push HTML to GitHub Pages
       run: |
-        git config user.name "${GITHUB_ACTOR}"
-        git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+        git config user.name "kailous"
+        git config user.email "kailous@users.noreply.github.com"
         git add index.html
         git commit -m "Update GitHub Pages"
         git push
