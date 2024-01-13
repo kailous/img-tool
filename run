@@ -140,9 +140,9 @@ process_images() {
 }
 
 # 根据压缩的类型做不同的判断
-if [ "$type" -eq 1 ]; then
+if [ "$label" -eq 1 ]; then
     process_images "$main_img_size"
-elif [ "$type" -eq 2 ]; then
+elif [ "$label" -eq 2 ]; then
     process_images "$cover_img_size"
 else
     echo "没有需要转换的图片"
